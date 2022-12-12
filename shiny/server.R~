@@ -1,0 +1,61 @@
+
+library(shiny)
+source("/home/genis/github/recAdmix/recAdmixFuns.R") # CHANGE TO GITHUB VERISON ONCE REP IS PUBLIC
+
+
+error <- function(txt)
+    validate(  need(FALSE, txt)  ) 
+
+shinyServer(function(input, output) {
+
+    # functions to read in the input files
+    pairedAnc <- reactive({
+        f <- input$pairAncFile
+        x <- scan(f$datapath, what=.4)
+        return(x)
+    })
+
+    parentalQ  <- reactive({
+        f <- input$parentalQFile
+        x <- as.list(as.data.frame(t(as.matrix(read.table(f$datapath)))))
+        return(x)
+    })
+    
+    # get pedigrees compatible with parental Q
+    pedigrees <- eventReactive(input$run, {
+
+        q <- parentalQ()
+
+        # this is a list of lists of K lenght integer vectors
+        ped <- getAllSortedPedigrees(q)
+
+        return(ped)
+    })
+    
+
+    # for first test just plot first. later user can choose how many
+    output$pedigreePlot <- renderPlot(width=800 , height=800, {
+        
+        plotPedigree3(pedigrees()[[1]], title="Pedigree 1")
+    })
+    
+
+    output$pairAncPlot <- renderPlot(width=900,height=450,{
+        
+        plotEstimates2(pairedAnc(), parentalQ(), pedigrees()[[1]],
+                       main_title = "Paired ancestry proportions")
+    })
+
+
+    output$summaryTable <- renderDataTable({
+
+        d <- makePedigreesSummaryTable(pairedAnc(), parentalQ(), pedigrees(), is.ord=TRUE)
+
+        d
+
+        })
+    
+
+})
+
+

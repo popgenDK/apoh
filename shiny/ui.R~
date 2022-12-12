@@ -1,0 +1,31 @@
+
+library(shiny)
+library(markdown, lib.loc="/home/genis/R/x86_64-pc-linux-gnu-library/3.2")
+library(xfun, lib.loc="/home/genis/R/x86_64-pc-linux-gnu-library/3.2")
+
+
+shinyUI(fluidPage(
+
+    # Application title
+    titlePanel("Inference of recent admixture pedigrees"),
+
+    # Sidebar with a slider for different input 
+    sidebarLayout(
+        sidebarPanel(
+            fileInput("pairAncFile", "Upload your input file with paired ancestires for the individual"),
+            fileInput("parentalQFile", "Upload your input file with parental admixture proportions"),
+        
+            actionButton("run", label="Run")
+            
+          ),
+
+        mainPanel(
+            tabsetPanel(
+                tabPanel("Usage", includeMarkdown("README.md")),
+                tabPanel("Pedigrees", plotOutput("pedigreePlot")),
+                tabPanel("Paired ancestries plots", plotOutput("pairAncPlot")),
+                tabPanel("Summary Table", dataTableOutput("summaryTable"))
+            
+        ))
+    )
+))
