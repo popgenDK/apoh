@@ -6,13 +6,14 @@ colorpal <- c('#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#4477AA','
 
 printHelp <- function(){
 
-    cat("Admixture Pedigrees Of Hybrids (APOH).\nToolset to explore recent admixture pedigrees from paired ancestry proportions. \n\n
+    cat("Admixture Pedigrees Of Hybrids (apoh).\nToolset to explore recent admixture pedigrees from paired ancestry proportions. \n\n
 Arguments:\n\n
 \t\t-i --infile:\t path to .anccoeff file with inferred paired ancestries (as outputted by NGSremix)\n
 \t\t-o --outdir:\t directory to save output (must not exist).\n
 \t\t--ids:\t file with id for individual (optional).\n
 \t\t--npedigrees:\t number of top compatible recent admixture pedigrees to show (default 2).\n
 \t\t--forcedir:\t use outdir even if it already exists (default FALSE).\n
+\t\t--colpal:\t color palette as comma separated list of hexadecimal color codes (e.g. '#EE6677,#228833,#CCBB44...') \n
 \t\t-h:\t print help and exit.\n
 ")
 
@@ -24,15 +25,17 @@ readArgs <- function(args){
     pars <- list(infile=NULL,
                  outdir=NULL,
                  ids = NULL,
-                 npedigrees=2,
-                 forcedir = FALSE
+                 npedigrees = 2,
+                 forcedir = FALSE,
+                 colpal = NULL
                  )
 
-    for(i in seq(1, length(args), 2)){
+    for(i in seq(1, length(args), 2)
+        ){
 
-        if(args[i] == "--infile"){
+        if(args[i] == "--infile" | args[i] == "-i"){
             pars$infile <- args[i+1]
-        } else if(args[i] == "--outdir"){
+        } else if(args[i] == "--outdir" | args[i] == "-o"){
             pars$outdir <- args[i+1] 
         } else if(args[i] == "--ids"){
             pars$ids <- args[i+1]   
@@ -40,6 +43,8 @@ readArgs <- function(args){
             pars$npedigrees <- as.integer(args[i+1])
         } else if(args[i] == "--forcedir"){
             pars$forcedir <- as.logical(args[i+1])
+        } else if(args[i] == "--colpal"){
+            pars$colpal <- args[i+1]
         } else if(args[i] == "-h" | args[i] == "--help"){
             printHelp()
             stop("Printed help and exited due to -h flag, not really an error.")
@@ -56,7 +61,7 @@ readArgs <- function(args){
     } else if(is.null(pars$outdir)){
         stop("Missing path to output directory (--outdir is mandatory).")
     } else if(file.exists(pars$outdir) & pars$forcedir == FALSE){
-        stop("Output directory specified by --outdir already exists. Please remove it, use a new directory or run with --forcedir 1.")
+        stop("Output directory specified by --outdir already exists. Please remove it, use a new directory or run with --forcedir TRUE.")
     }
 
     return(pars)
@@ -318,25 +323,23 @@ pairedAncToCharacter <- function(pairedAnc, decimals=3){
 
 
 
-kl <- function(p, q){
-    # general function to calculate kullback-leiber divergence
-    # between two discrete probability distributions
-    # p and q must be equal lenght vectors
-    
-    a <- 0
-    for(i in 1:length(p)) a = a + p[i] * log2(p[i] / q[i])
-    return(a)
+entropy <- function(x){
+    # calculate entroyp of discrete probability distribution
+
+    h <- - sum(x * log2(x))
+    return(h)
 }
+
 
 
 js <- function(p, q){
     # general function to calculate jensen-shannon divergence
     # between two discrete probability distributions
     # p and q must be equal lenght vectors
-    
-    m <- (p + q) / 2
-    jss <- 0.5 * kl(p, m) + 0.5 * kl(q,m)
-    return(jss)
+
+    js <- sqrt(entropy((p + q) / 2) - ((entropy(p) + entropy(q))/2))
+
+    return(js)
 }
 
 
@@ -384,6 +387,7 @@ jsBestFit <- function(parentalQ){
 
     return(min(abs(dists)))
 }
+
 
 
 jsRatio <- function(parentalQ){
@@ -438,6 +442,14 @@ inconsistencyIndex <- function(parentalQ, pairedAnc){
 }
 
 
+rankPedigreesParentalQdist <- function(parentalQ, pedigrees){
+
+
+    dists <- sapply(pedigrees, jsParentalQPed, parentalQ=parentalQ)
+    return(order(dists, decreasing=F))
+}
+
+
 getAllSortedPedigrees <- function(parentalQ){
     # given parental Q, get all compatible pedigrees by order of
     # more to less distant to paretnalQ
@@ -457,65 +469,21 @@ doManySamplesIndexesTable <- function(parentalQs, pairedAncss = NULL, npeds=2, i
     # 2 or 3 informative indexes
 
     if(is.null(ids)) ids <- names(parentalQs)
+    names(parentalQs) <- ids
+    rownames(pairedAncss) <- ids
     
     pedigrees <- lapply(parentalQs, function(x) getAllSortedPedigrees(x)[1:npeds])#[1:2]
     pedSupport <- t(sapply(names(pedigrees), function(x) sapply(pedigrees[[x]], jsParentalQPed, parentalQ=parentalQs[[x]])))
 
     df <- data.frame("SampleID" = ids)
 
-    if(!is.null(pairedAncss)) df["InconsistencyIndex"] <- sapply(ids, function(x) inconsistencyIndex(parentalQs[[x]], pairedAncss[x,]))
-    df["Distance to independent pedigree"] <- sapply(parentalQs, jsRecentOldParentalQ)
-    for(i in 1:npeds) df[paste("Distance to pedigree",i)] <- pedSupport[,i]
+    if(!is.null(pairedAncss)) df["InconsistencyIndex"] <- format(sapply(ids, function(x) inconsistencyIndex(parentalQs[[x]], pairedAncss[x,])), digits=2,nsmall=2,scientific=F)
+    df["Distance to independent pedigree"] <- format(sapply(parentalQs, jsRecentOldParentalQ), digits=2,nsmall=2,scientific=F)
+    for(i in 1:npeds) df[paste("Distance to pedigree",i)] <- format(pedSupport[,i], digits=2,nsmall=2,scientific=F)
     
     df["Admixture index"] <-  sapply(1:length(parentalQs), function(x) ifelse(df[x,"Distance to independent pedigree"] > df[x,"Distance to pedigree 1"], tFromParentalQ(parentalQs[[x]]), ""))
     
     return(df)
-}
-
-
-
-makePedigreesSummaryTable <- function(parentalQ, pedigrees=NULL){#function(pairedAnc, parentalQ, pedigrees=NULL){
-
-    if(is.null(pedigrees)) pedigrees <- getAllPedigrees(parentalQ)
-
-    #distsPairedAnc <- sapply(pedigrees, distPairedAncPed, pairedAnc=pairedAnc)
-    distsParentalQ <- sapply(pedigrees, distParentalQPed, parentalQ=parentalQ)
-
-    
-    charPeds <- sapply(pedigrees, pedigreeToCharacter)
-    charParQ <- sapply(lapply(pedigrees, parentalQFromPed), parentalQToCharacter)
-    #charPairAnc <- sapply(lapply(pedigrees, pAFromPed), pairedAncToCharacter)
-    ids <- paste("pedigree", 1:length(pedigrees), sep="")
-
-    # add independent pedigree
-    q <- do.call("+", parentalQ) / 2
-    indParentalQ <- list(q,q)
-    
-    distsParentalQ <- c(distsParentalQ, dist(rbind(unlist(parentalQ), unlist(indParentalQ)), method="euclidean"))
-    charPeds <- c(charPeds, "Not recent")
-    charParQ <- c(charParQ, parentalQToCharacter(indParentalQ))
-    ids <- c(ids, "Independent pedigree")
-
-    # ordered paired ancestries from parental 
-    jsDivergence <- unlist(sapply(pedigrees, jsParentalQPed, parentalQ=parentalQ))
-    jsDivergence <- c(jsDivergence, jsRecentOldParentalQ(parentalQ))
-    paParental <- orderedPAFromPed(parentalQ)
-
-    # order
-    ord <- order(distsParentalQ)
-    #ord <- order(jss)
-    
-    pedSummary <- data.frame(`Pedigree ID`=ids[ord], Pedigree=charPeds[ord],
-                               `Expected parental Q` = charParQ[ord],
-                               `Observed parental Q` = parentalQToCharacter(parentalQ),
-                             `Distance expected to observed parental Q` = distsParentalQ[ord],
-                             `JS divergence expected to estimated` = jsDivergence[ord])
-                               #`Expected paired ancestry` = charPairAnc[ord],
-                               #`Observed paired ancestry` = pairedAncToCharacter(pairedAnc),
-                               #`Distance expected to observed paired ancestry` = distsPairedAnc[ord])
-
-    pedSummary
-
 }
 
 
@@ -654,7 +622,9 @@ plotPairedAnc <- function(pairedAnc, x = 0.25, y = 0, title = "Paired ancestry p
 plotEstimates <- function(pairedAnc, parentalQ, pedigrees,
                            main_title = "Paired ancestry proportions",
                            cex.main=1.5,
-                           cex.lab=1, showConsistency=FALSE){
+                          cex.lab=1,
+                          colpal=colorpal,
+                          showConsistency=FALSE){
     ## wrappter of plotPairedancestries that plots 3 + n cases:
     # 1. paired ancestry assuming independence (i.e. no recent admixture)
     # 2. pared ancestry props inferred from the data
@@ -688,11 +658,11 @@ plotEstimates <- function(pairedAnc, parentalQ, pedigrees,
     text(x = mean(xlim), y = 1.1, labels=main_title, cex=cex.main, xpd=NA)
 
     par(xpd=NA)
-    plotPairedAnc(qq1, x=x[1], title="")
-    plotPairedAnc(qq2, x=x[2], title="")
-    plotPairedAnc(qq3, x=x[3], title="")
+    plotPairedAnc(qq1, x=x[1], title="", colpal=colpal)
+    plotPairedAnc(qq2, x=x[2], title="", colpal=colpal)
+    plotPairedAnc(qq3, x=x[3], title="", colpal=colpal)
     
-    for(i in 1:length(pedigrees)) plotPairedAnc(pAFromPed(pedigrees[[i]]), x=x[i+3], title="")
+    for(i in 1:length(pedigrees)) plotPairedAnc(pAFromPed(pedigrees[[i]]), x=x[i+3], title="", , colpal=colpal)
 
     axis(side=2, line=0.5, cex.axis=1.2)
     text(x=xlim[1] - 0.25 - 0.02 * length(pedigrees), y=0.5, srt=90, labels="Paired ancestry proportions", cex=1.4)

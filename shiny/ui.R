@@ -36,7 +36,6 @@ shinyUI(fluidPage(
                 tabPanel("Summary indices table", dataTableOutput("indicesTable")),
                 tabPanel("Individual ordered paired ancestries plots", plotOutput("orderedPairAncPlot")),
                 tabPanel("Individual pedigrees", plotOutput("pedigreePlot", width="auto", height="auto")),
-                tabPanel("Individual summary Table", dataTableOutput("summaryTable")),
                 tabPanel("Individual unordered paired ancestries plots", plotOutput("unorderedPairAncPlot")),
             
         ))

@@ -1,6 +1,6 @@
 
 library(shiny)
-source("https://raw.githubusercontent.com/popgenDK/apoh/main/apohFuns.R")
+#source("https://raw.githubusercontent.com/popgenDK/apoh/main/apohFuns.R")
 source("/home/genis/github/apoh/apohFuns.R")
 
 error <- function(txt)
@@ -216,20 +216,6 @@ shinyServer(function(input, output) {
     }, width = widthPlot3, height=400)
 
 
-
-    output$summaryTable <- renderDataTable({
-       
-        validate(
-            need(!is.null(input$anccoefFile), "Upload file with model estimates!"),
-            need(input$ind != "", "Select individual")
-        )
-
-        parentalQ <- allParentalQ()[[input$ind]]
-
-        d <- makePedigreesSummaryTable(parentalQ, pedigrees())
-
-        d
-    }) 
 
 
 
