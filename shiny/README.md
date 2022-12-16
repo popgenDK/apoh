@@ -1,5 +1,11 @@
 
-# Recent admixture pedigrees
+# apoh - Admixture Pedigrees Of Hybrids
+
+apoh is a software to infer, explore, rank and visualize recent admixture pedigrees of hybrids. As input it takes the estimates of paired ancestry proportions that can be produced by NGSremix -bothanc 1 option. This shiny provides a Graphical User Interface (GUI) to do so interactively.
+
+## Usage
+
+To upload the data 
 
 Shiny to process paired ancestries and parental admixture proporitons and visualize most likely pedigrees to generate observed proporitons.
 

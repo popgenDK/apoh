@@ -7,14 +7,13 @@ library(xfun, lib.loc="/newHome/genis/R/x86_64-pc-linux-gnu-library/4.1")
 shinyUI(fluidPage(
 
     # Application title
-    titlePanel("Inference of recent admixture pedigrees"),
+    titlePanel("apoh - Admixture Pedigrees Of Hybrids"),
 
     # Sidebar with a slider for different input 
     sidebarLayout(
         sidebarPanel(
-            fileInput("parentalQFile", "Upload your input file with parental admixture proportions"),
-            fileInput("pairAncFile", "Upload your input file with paired ancestry proportions (optional)"),
-            
+            fileInput("anccoefFile", "Upload your input file with model estimates (NGSremix .anccoef output)"),
+
             fileInput("indfile", "Upload file with IDs for the individuals (optional)"),
 
             uiOutput("chooseInd"),
@@ -33,10 +32,12 @@ shinyUI(fluidPage(
         mainPanel(
             tabsetPanel(
                 tabPanel("Usage", includeMarkdown("README.md")),
-                tabPanel("Ordered paired ancestries plots", plotOutput("orderedPairAncPlot")),
-                tabPanel("Pedigrees", plotOutput("pedigreePlot", width="auto", height="auto")),
-                tabPanel("Summary Table", dataTableOutput("summaryTable")),
-                tabPanel("Unordered paired ancestries plots", plotOutput("unorderedPairAncPlot")),
+                tabPanel("Parental admixture plot", plotOutput("parentalAdmixPlot")),
+                tabPanel("Summary indices table", dataTableOutput("indicesTable")),
+                tabPanel("Individual ordered paired ancestries plots", plotOutput("orderedPairAncPlot")),
+                tabPanel("Individual pedigrees", plotOutput("pedigreePlot", width="auto", height="auto")),
+                tabPanel("Individual summary Table", dataTableOutput("summaryTable")),
+                tabPanel("Individual unordered paired ancestries plots", plotOutput("unorderedPairAncPlot")),
             
         ))
     )

@@ -1,7 +1,7 @@
 
 
 whereDir <- function(){
-    # function to get directory where scripts are, so recAdmixFuns.R can be sourced when run from any folderfrom outside. Assumes recAdmix.R and recAdmixFuns.R are in the same folder
+    # function to get directory where scripts are, so apohFuns.R can be sourced when run from any folderfrom outside. Assumes apoh.R and apohFuns.R are in the same folder
     # made by krishang
     cmdArgs <- commandArgs(trailingOnly = FALSE)
     needle <- "--file"
@@ -12,20 +12,49 @@ whereDir <- function(){
 }
 
 
-
 d <- whereDir()
-source(paste(d, "recAdmixFuns.R", sep="/"))
-
+source(paste(d, "apohFuns.R", sep="/"))
 
 args <- commandArgs(trailingOnly=T)
 pars <- readArgs(args)
 
-# expected format: parental Q 2 rows K columns tab or space delimited file
-# paired ancestry 1 row K*(K-1)/2+K length tab or space delimited
-parentalQ <-  as.list(as.data.frame(t(as.matrix(read.table(pars$parentalQ)))))
-pairedAnc <- scan(pars$pairedAnc, what=.3)
+f <- pars$inancestries
+outdir <- pars$outdir
+dir.create(outdir)
 
-ind <- pars$ind
+res <- read_ancestries(f)
+parentalAnc <- res[[1]]
+pairAnc <- res[[2]]
+
+ids <- names(parentalAnc)
+if(!is.null(pars$ids)) ids <- scan(pars$ids, what="fld")
+
+# make plot of parentaladmxiture proportions
+outpng1 <- paste0(outdir, "/parantalAdmixture.png")
+bitmap(outpng1, w=8, h=6, res=300)
+plotParentalAdmixture(parentalAnc, inds=ids)
+dev.off()
+
+
+# make tabe of summary indices for all samples
+
+
+# for each individual, make directory and save different stuff
+for(i in 1:length(ids)){
+
+    id <- ids[i]
+    outdir2 <- paste0(outdir, "/", id)
+    dir.create(outdir2)
+
+    # make parental ancestires plot
+
+    # make paired ancestry proportions plot
+
+    # 
+
+}
+
+
 
 # prefix path for ouptu files
 outprefix <- pars$outprefix

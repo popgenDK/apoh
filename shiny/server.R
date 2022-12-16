@@ -1,20 +1,20 @@
 
 library(shiny)
-source("/home/genis/github/recAdmix/recAdmixFuns.R") # CHANGE TO GITHUB VERISON ONCE REP IS PUBLIC
-
+source("https://raw.githubusercontent.com/popgenDK/apoh/main/apohFuns.R")
+source("/home/genis/github/apoh/apohFuns.R")
 
 error <- function(txt)
     validate(  need(FALSE, txt)  ) 
 
 shinyServer(function(input, output) {
 
-    # functions to read in the input files
+    # functions to read paired ancestries from input files
     allPairedAnc <- reactive({
         
-        f <- input$pairAncFile
+        f <- input$anccoefFile
         indf <- input$indfile
-        
-        x <- read_pairedancs(f$datapath)
+
+        x <- read_ancestries(f$datapath)[[2]]
         
         #inds <- 1:nrow(x)
         if(!is.null(indf)){
@@ -27,11 +27,11 @@ shinyServer(function(input, output) {
 
     
     allParentalQ  <- reactive({
-        
-        f <- input$parentalQFile
+        # function to read parental ancestry from input files
+        f <- input$anccoefFile
         indf <- input$indfile
 
-        x <- read_parentalancs(f$datapath)
+        x <- read_ancestries(f$datapath)[[1]]
 
         if(!is.null(indf)){
             inds <- scan(indf$datapath, what="fd")
@@ -39,6 +39,43 @@ shinyServer(function(input, output) {
         }
         
         return(x)
+    })
+
+    ## get optimal widht for parental admixture plot given number of samples
+    parentalPlotwidth <- reactive({
+
+        ninds <- length(allParentalQ())
+
+        return(min(ninds * 100,1600))
+    })
+
+    ## make plot of parental admixture proportions for all samples
+    output$parentalAdmixPlot <- renderPlot({
+
+        parentalQ <- allParentalQ()
+
+        indlabels <- TRUE
+        if(length(parentalQ) > 20) indlabels <- FALSE
+        
+        par(oma = c(3,0.5,0,0))
+        plotParentalAdmixture(parentalQ, indlabels= indlabels)
+        
+    }, width=parentalPlotwidth, height=800)
+
+
+    ## make table with summary indices, etc. for all samples
+    output$indicesTable <- renderDataTable({
+        
+        nshow <- input$ncases
+        indf <- input$indfile
+        #nshow <- min(nshow, length(pedigrees()))
+
+        parentalQ <- allParentalQ()
+        pairedAnc <- allPairedAnc()
+        
+        if(!is.null(indf)){ inds <- scan(indf$datapath, what="fd")} else {inds <- NULL}
+
+        doManySamplesIndexesTable(parentalQs = allParentalQ(), pairedAncss = allPairedAnc(), ids = inds, npeds=nshow)
     })
 
     
@@ -57,21 +94,21 @@ shinyServer(function(input, output) {
 
         selectInput('ind', 'Select individual',  c(Choose="", inds), selectize=TRUE)
 
-        })
+    })
     
     
     # get pedigrees compatible with parental Q
-    #pedigrees <- eventReactive(input$run, {
+    # pedigrees <- eventReactive(input$run, {
     pedigrees <- reactive({
         
         validate(
-            need(!is.null(input$parentalQFile), "Upload file with parental admixture proportions"),
+            need(!is.null(input$anccoefFile), "Upload file with model estimates!"),
             need(input$ind != "", "Select individual")
         )
 
 
         q <- allParentalQ()[[input$ind]]
-        
+
         # this is a list of lists of K lenght integer vectors
         ped <- getAllSortedPedigrees(q)
 
@@ -100,6 +137,8 @@ shinyServer(function(input, output) {
     })
 
 
+    
+    
     output$pedigreePlot <- renderPlot({
 
         nshow <- input$ncases
@@ -111,7 +150,7 @@ shinyServer(function(input, output) {
         
         plotIndependentPedigree(parentalQ, title=paste( "Independent ancestries\npedigree sample ",input$ind))
         
-        for(i in 1:nshow) plotPedigree3(pedigrees()[[i]], title=paste("Pedigree", i, "\nsample ", input$ind))
+        for(i in 1:nshow) plotPedigree(pedigrees()[[i]], title=paste("Pedigree", i, "\nsample ", input$ind))
     }, width=widthPlot1, height=heightPlot1)
     
 
@@ -131,7 +170,7 @@ shinyServer(function(input, output) {
 
         validate(
             #need(!is.null(input$parentalQFile), "Upload file with parental admixture proportions"),
-            need(!is.null(input$pairAncFile), "Upload file with paired ancestry proportions"),
+            need(!is.null(input$anccoefFile), "Upload file with model estimates!"),
             need(input$ind != "", "Select individual")
         )
 
@@ -141,8 +180,8 @@ shinyServer(function(input, output) {
         pairedAnc <- allPairedAnc()[input$ind,]
         #par(mfrow=getdim(nshow))
 
-        plotEstimates3(pairedAnc, parentalQ, pedigrees()[1:nshow],
-                       main_title = paste("Unordered paired ancestry proportions\nsample", input$ind))
+        plotEstimates(pairedAnc, parentalQ, pedigrees()[1:nshow],
+                      main_title = paste("Unordered paired ancestry proportions\nsample", input$ind))
     }, width = widthPlot2, height=400)
 
 
@@ -162,7 +201,7 @@ shinyServer(function(input, output) {
 
         
         validate(
-            need(!is.null(input$parentalQFile), "Upload file with parental admixture proportions"),
+            need(!is.null(input$anccoefFile), "Upload file with model estimates!"),
             need(input$ind != "", "Select individual")
         )
 
@@ -181,7 +220,7 @@ shinyServer(function(input, output) {
     output$summaryTable <- renderDataTable({
        
         validate(
-            need(!is.null(input$parentalQFile), "Upload file with parental admixture proportions"),
+            need(!is.null(input$anccoefFile), "Upload file with model estimates!"),
             need(input$ind != "", "Select individual")
         )
 
@@ -200,7 +239,7 @@ shinyServer(function(input, output) {
         content = function(fname){
 
             pdf(fname)
-            for(i in 1:length(pedigrees()))  plotPedigree3(pedigrees()[[i]],
+            for(i in 1:length(pedigrees()))  plotPedigree(pedigrees()[[i]],
                                                            title=paste("Pedigree", i))
             dev.off()
 
@@ -217,7 +256,7 @@ shinyServer(function(input, output) {
 
             
             pdf(fname)
-            for(i in 1:length(pedigrees()))  plotEstimates2(pairedAnc,
+            for(i in 1:length(pedigrees()))  plotEstimates(pairedAnc,
                                                             parentalQ,
                                                             pedigrees()[[i]],
                                                             main_title = paste("Paired ancestry proportions\n pedigree", i))

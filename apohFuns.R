@@ -8,9 +8,11 @@ printHelp <- function(){
 
     cat("Admixture Pedigrees Of Hybrids (APOH).\nToolset to explore recent admixture pedigrees from paired ancestry proportions. \n\n
 Arguments:\n\n
-\t\t-i --inancestries:\t path to file with inferred paired ancestries (as outputted by NGSremix)\n
-\t\t-o --outprefix:\t prefix to write output files to.\n
-\t\t--ind:\t file with id for individual.\n
+\t\t-i --infile:\t path to .anccoeff file with inferred paired ancestries (as outputted by NGSremix)\n
+\t\t-o --outdir:\t directory to save output (must not exist).\n
+\t\t--ids:\t file with id for individual (optional).\n
+\t\t--npedigrees:\t number of top compatible recent admixture pedigrees to show (default 2).\n
+\t\t--forcedir:\t use outdir even if it already exists (default FALSE).\n
 \t\t-h:\t print help and exit.\n
 ")
 
@@ -19,20 +21,26 @@ Arguments:\n\n
 
 readArgs <- function(args){
 
-    pars <- list(inancestries,
-                 outprefix=NULL,
-                 ind = NULL
+    pars <- list(infile=NULL,
+                 outdir=NULL,
+                 ids = NULL,
+                 npedigrees=2,
+                 forcedir = FALSE
                  )
 
     for(i in seq(1, length(args), 2)){
 
-        if(args[i] == "--"){
-            pars$inancestries <- args[i+1]
-        } else if(args[i] == "--outprefix"){
-            pars$outprefix <- args[i+1]
-        } else if(args[i] == "--ind"){
-            pars$ind <- args[i+1]
-        } else if(args[i] == "-h"){
+        if(args[i] == "--infile"){
+            pars$infile <- args[i+1]
+        } else if(args[i] == "--outdir"){
+            pars$outdir <- args[i+1] 
+        } else if(args[i] == "--ids"){
+            pars$ids <- args[i+1]   
+        } else if(args[i] == "--npedigrees"){
+            pars$npedigrees <- as.integer(args[i+1])
+        } else if(args[i] == "--forcedir"){
+            pars$forcedir <- as.logical(args[i+1])
+        } else if(args[i] == "-h" | args[i] == "--help"){
             printHelp()
             stop("Printed help and exited due to -h flag, not really an error.")
         } else {
@@ -42,21 +50,18 @@ readArgs <- function(args){
     }
 
     
-    if(is.null(pars$parentalQ)){
+    if(is.null(pars$infile)){
         printHelp()
-        stop("Missing path to file with parental admixture proportions (--parentalQ).")
-    } else if(is.null(pars$pairedAnc)){
-        stop("Missing path to file with paired ancestry proportions (--pairedAnc).")
-    } else if(is.null(pars$outprefix)){
-        stop("Missing prefix to save output to (--outprefix).")
+        stop("Missing path to input .anccoeff file (--infile is mandatory).")
+    } else if(is.null(pars$outdir)){
+        stop("Missing path to output directory (--outdir is mandatory).")
+    } else if(file.exists(pars$outdir) & pars$forcedir == FALSE){
+        stop("Output directory specified by --outdir already exists. Please remove it, use a new directory or run with --forcedir 1.")
     }
-    
-
 
     return(pars)
 
 }
-
 
 
 
@@ -94,28 +99,6 @@ read_ancestries <- function(f){
     return(list(parentalAnc, pairAnc))
 
 }
-
-read_parentalancs <- function(f){
-    # takes path to paired ancestries file
-    # reads and returns parental admxiture proportions as a list
-
-    l <- read_ancestries(f)
-    return(l[[1]])
-
-}
-
-
-
-
-read_pairedancs <- function(f){
-    # takes path to paired ancestries file
-    # reads and returns paired ancestrie proportions as a list
-
-    l <- read_ancestries(f)
-    return(l[[1]])
-
-}
-
 
 
 
@@ -223,7 +206,6 @@ pAFromIQ <- function(q){
 }
 
 
-
 parentalQFromPed <- function(pedigree){
     # calculate expected parental admixture pedigree proporitons
     # given a pedigree, defined as a set of unadmixed ancestors for each parent
@@ -296,34 +278,6 @@ orderedPAIndependent <- function(parentalQ){
 
 
 
-distParentalQPed <- function(parentalQ, pedigree){
-    # euclidean distance between given parental admixture proportions and
-    # parental admixture proprotions expected given a pedigree
-
-    
-    eParentalQ <- parentalQFromPed(pedigree)
-
-    d <- dist(rbind(unlist(parentalQ), unlist(eParentalQ)), method="euclidean")
-
-    d
-
-}
-
-
-
-distPairedAncPed <- function(pairedAnc, pedigree){
-    # euclidean distance between given paired ancestry and
-    # paired ancestry expected given a pedigree
-
-    ePairedAnc <- pAFromPed(pedigree)
-
-    d <- dist(rbind(pairedAnc, ePairedAnc), method="euclidean")
-    
-    d
-    
-}
-
-
 
 pedigreeToCharacter <- function(pedigree){
     ## converts a pedigree object (list of k lenght integer vectors)
@@ -360,20 +314,6 @@ pairedAncToCharacter <- function(pairedAnc, decimals=3){
 
     char
     
-}
-
-
-
-rankPedigreesParentalQdist <- function(parentalQ, pedigrees){
-    # return order of pedigrees from less to more distance
-    # of expected parental Q to the observed ones
-
-    dists <- sapply(pedigrees, distParentalQPed, parentalQ=parentalQ)
-    
-    ord <- order(dists)
-
-    ord
-
 }
 
 
@@ -477,7 +417,7 @@ tFromParentalQ <- function(parentalQ){
 }
 
 
-consistencyIndex <- function(parentalQ, pairedAnc){
+inconsistencyIndex <- function(parentalQ, pairedAnc){
     # use difference between estiamted unordered paired ancestries and
     # paired ancestries expected from estiamted parental ancestries.
     # difference measured as jensen-shannon divergence
@@ -509,6 +449,27 @@ getAllSortedPedigrees <- function(parentalQ){
     pedigrees <- pedigrees[ord]
     return(pedigrees)
 
+}
+
+
+doManySamplesIndexesTable <- function(parentalQs, pairedAncss = NULL, npeds=2, ids=NULL){
+    # fucntion to summarise results for many sample using
+    # 2 or 3 informative indexes
+
+    if(is.null(ids)) ids <- names(parentalQs)
+    
+    pedigrees <- lapply(parentalQs, function(x) getAllSortedPedigrees(x)[1:npeds])#[1:2]
+    pedSupport <- t(sapply(names(pedigrees), function(x) sapply(pedigrees[[x]], jsParentalQPed, parentalQ=parentalQs[[x]])))
+
+    df <- data.frame("SampleID" = ids)
+
+    if(!is.null(pairedAncss)) df["InconsistencyIndex"] <- sapply(ids, function(x) inconsistencyIndex(parentalQs[[x]], pairedAncss[x,]))
+    df["Distance to independent pedigree"] <- sapply(parentalQs, jsRecentOldParentalQ)
+    for(i in 1:npeds) df[paste("Distance to pedigree",i)] <- pedSupport[,i]
+    
+    df["Admixture index"] <-  sapply(1:length(parentalQs), function(x) ifelse(df[x,"Distance to independent pedigree"] > df[x,"Distance to pedigree 1"], tFromParentalQ(parentalQs[[x]]), ""))
+    
+    return(df)
 }
 
 
@@ -578,7 +539,6 @@ plotOrderedPairedAnc <- function(ordPairedAnc, x = 0.25, y = 0, title = "Paired 
                           write_vals = FALSE, new_plot=FALSE,
                           cex.title=1.5, cex.labs = 1,
                           colpal=colorpal){
-
     
     qq <- ordPairedAnc
     K<- sqrt(length(qq))
@@ -602,8 +562,6 @@ plotOrderedPairedAnc <- function(ordPairedAnc, x = 0.25, y = 0, title = "Paired 
     
     if(write_vals)
         text(x+0.25,cumsum(qq)-qq/2,round(qq*100,1), cex=cex.labs) 
-
-
     
 }
 
@@ -613,19 +571,16 @@ plotOrderedEstimates <- function(parentalQ, pedigrees,
                            main_title = "Paired ancestry proportions\n(ordered)",
                            cex.main=1.5,
                            cex.lab=1,
-                           colpal=colorpal){
-
+                           colpal=colorpal, showsupport = FALSE){
 
     on.exit(par(mar=c(5,4,4,2) +0.1))
 
-    par(mar=c(5.1, 4.1, 6.1, 4.1))
+    #par(mar=c(5.1, 4.1, 6.1, 4.1))
  
     k <- length(parentalQ[[1]])
 
     qq1 <- orderedPAFromParentalQ(parentalQ)
     qq2 <- orderedPAIndependent(parentalQ)
-
-
     
     xlim <- c(0, 1 + 0.5 * length(pedigrees))
     
@@ -642,16 +597,23 @@ plotOrderedEstimates <- function(parentalQ, pedigrees,
     
     for(i in 1:length(pedigrees)) plotOrderedPairedAnc(orderedPAFromPed(pedigrees[[i]]), x=x[i+2], title="", colpal=colpal)
 
-    axis(side=2, line=2.2)
-    text(x=xlim[1] - 0.5 - 0.02 * length(pedigrees), y=0.5, srt=90, labels="Paired ancestry proportions", cex=cex.lab)
+    axis(side=2, line=1, cex.axis=1.2)
+    text(x=xlim[1] - 0.35 - 0.02 * length(pedigrees), y=0.5, srt=90, labels="Paired ancestry proportions", cex=1.4, xpd=NA)
     
     xlabs <- c("Model estimates",
-               "Expected under\nindependent ancestries",
+               "Expected under\nindependent pedigree",
                paste("Expected under\npedigree", 1:length(pedigrees)))
 
-    text(x=x, y=-0.1, labels=xlabs, cex=cex.lab)
+    text(x=x, y=-0.085, labels=xlabs, cex=cex.lab)
 
+    if(showsupport){
+        
+        pedsupport <- sapply(pedigrees, jsParentalQPed, parentalQ = parentalQ)
+        indepsupport <- jsRecentOldParentalQ(parentalQ)
 
+        xlabs2 <- paste("Distance to\nestimate = ", round(c(indepsupport,pedsupport),2))
+        text(x=x[-1], y=1.1, labels=xlabs2, cex=cex.lab)
+    }
 
 }
 
@@ -686,86 +648,13 @@ plotPairedAnc <- function(pairedAnc, x = 0.25, y = 0, title = "Paired ancestry p
         text(x+0.25,cumsum(qq)-qq/2,round(qq*100,1), cex=cex.labs) 
 
 }
-
-
-
-plotEstimates <- function(pairedAnc, parentalQ, cex.titles=1){
-    ## wrappter of plotPairedancestries that plots 3 cases:
-    # 1. paired ancestry assuming independence (i.e. no recent admixture)
-    # 2. pared ancestry props inferred from the data
-    # 3. paired ancestry props expected given the inferred parental admixture proprotions
-    k <- length(parentalQ[[1]])
-
-    qq1 <- pairedAnc
-    qq2 <- pAFromPQ(parentalQ)
-
-    a <- combi(k)
-    q <- tapply(c(qq1,qq1),a,sum)/2
-
-    qq3 <- pAFromIQ(q)
-    
-    if(length(qq1) != length(qq2)) stop("Paired ancestry and parental Q imply different K.")
-
-    plot(1, type="n", xlab="", ylab="", xlim=c(-0.5, 2.5), ylim=c(0, 1), xaxt="n", yaxt="n", bty="n")
-
-    par(xpd=NA)
-    plotPairedAnc(qq3, x=0, title="Paired ancestry given\nindividual admixture proportion", cex.title=cex.titles)
-    plotPairedAnc(qq1, x=1, title="Inferred paired ancestry", cex.title=cex.titles)
-    plotPairedAnc(qq2, x=2, title="Paired ancestry given inferred\nparental admixture proportions", cex.title=cex.titles)
-
-}
-
-
-plotEstimates2 <- function(pairedAnc, parentalQ, pedigree,
-                           main_title = "Paired ancestry proportions",
-                           cex.main=1.5,
-                           cex.subtitles=0.8){
-    ## wrappter of plotPairedancestries that plots 4 cases:
-    # 1. paired ancestry assuming independence (i.e. no recent admixture)
-    # 2. pared ancestry props inferred from the data
-    # 3. paired ancestry props expected given the inferred parental admixture proprotions
-    # 4. paired ancestry props expected given the proposed admixture pedigree
-
-    on.exit(par(mar=c(5,4,4,2) +0.1))
-
-    par(mar=c(5.1, 4.1, 6.1, 4.1))
  
-    k <- length(parentalQ[[1]])
-
-    qq1 <- pairedAnc
-    qq2 <- pAFromPQ(parentalQ)
-
-    a <- combi(k)
-    q <- tapply(c(qq1,qq1),a,sum)/2
-
-    qq3 <- pAFromIQ(q)
-    qq4 <- pAFromPed(pedigree)
-    
-    if(length(qq1) != length(qq2)) stop("Paired ancestry and parental Q imply different K.")
-
-    xlim <- c(-0.5, 2.5)
-    
-    plot(1, type="n", xlab="", ylab="", xlim=xlim, ylim=c(0, 1), xaxt="n", yaxt="n", bty="n")
-
-    x <- seq(xlim[1], xlim[2], length.out=4)
-
-    text(x = mean(xlim), y = 1.2, labels=main_title, cex=cex.main, xpd=NA)
-    
-    par(xpd=NA)
-    plotPairedAnc(qq3, x=x[1], title="Given individual\nadmixture proportions", cex.title=cex.subtitles)
-    plotPairedAnc(qq1, x=x[2], title="Model estimates", cex.title=cex.subtitles)
-    plotPairedAnc(qq2, x=x[3], title="Given parental\nadmixture proportions", cex.title=cex.subtitles)
-    plotPairedAnc(qq4, x=x[4], title="Given admixture\npedigree", cex.title=cex.subtitles)
 
 
-}
-
-
-
-plotEstimates3 <- function(pairedAnc, parentalQ, pedigrees,
+plotEstimates <- function(pairedAnc, parentalQ, pedigrees,
                            main_title = "Paired ancestry proportions",
                            cex.main=1.5,
-                           cex.lab=1){
+                           cex.lab=1, showConsistency=FALSE){
     ## wrappter of plotPairedancestries that plots 3 + n cases:
     # 1. paired ancestry assuming independence (i.e. no recent admixture)
     # 2. pared ancestry props inferred from the data
@@ -774,7 +663,7 @@ plotEstimates3 <- function(pairedAnc, parentalQ, pedigrees,
 
     on.exit(par(mar=c(5,4,4,2) +0.1))
 
-    par(mar=c(7.1, 6.1, 4.1, 4.1))
+    #par(mar=c(7.1, 6.1, 4.1, 4.1))
 
     k <- length(parentalQ[[1]])
 
@@ -805,187 +694,36 @@ plotEstimates3 <- function(pairedAnc, parentalQ, pedigrees,
     
     for(i in 1:length(pedigrees)) plotPairedAnc(pAFromPed(pedigrees[[i]]), x=x[i+3], title="")
 
-    axis(side=2, line=0.5)
-    text(x=xlim[1] - 0.35 - 0.02 * length(pedigrees), y=0.5, srt=90, labels="Paired ancestry proportions", cex=cex.lab)
+    axis(side=2, line=0.5, cex.axis=1.2)
+    text(x=xlim[1] - 0.25 - 0.02 * length(pedigrees), y=0.5, srt=90, labels="Paired ancestry proportions", cex=1.4)
     
-    xlabs <- c("Paired\nancestry", "Parental\nadmixture",
-               "Independent\npedigree",
-               paste("Pedigree", 1:length(pedigrees)))
+    xlabs <- c("Paired\nancestry\nmodel\nestimates", "Parental\nadmixture\nmodel\nestimates",
+               "Expected\nunder\nindependent\npedigree",
+               paste("Expected\nunder\npedigree", 1:length(pedigrees)))
 
-    text(x=x, y=-0.1, labels=xlabs, cex=cex.lab)
-    
+    text(x=x, y=-0.2, labels=xlabs, cex=cex.lab)
+
+    if(showConsistency){
+
+        idx <- inconsistencyIndex(pairedAnc = pairedAnc, parentalQ = parentalQ)
+        text(x=mean(x[1:2]), y=1.1, labels=paste("Inconsistency index =", round(idx,2)), xpd=NA, cex=cex.lab)
+
+    }
 }
-
 
 
 
 nextXpoints <- function(xpoints)
     tapply(xpoints, rep(1:(length(xpoints)/2), each=2), mean)
 
+
+
 nextQanc <- function(qanc)
     t(sapply(1:(nrow(qanc)/2), function(x) qanc[x*2-1,]/2 + qanc[x*2,]/2))
 
 
+
 plotPedigree <- function(pedigree, title = "", cex.title=1.5,
-                         colpal=colorpal){
-    # plot a single admixture pedigree, taking as input the number of unadmixed indivduals
-    # for each ancestral population in each branch
-    # pedigree: list of two vectors of length K that sum to 8
-
-    nanc1 <- pedigree[[1]]
-    nanc2 <- pedigree[[2]]
-
-    on.exit(par(mar=c(5,4,4,2) +0.1))
-
-    par(mar=c(0, 2.1, 4.1, 2.1))
-    plot.new()
-
-    text(x=0.5, y=1.12, labels=title, xpd=NA, cex=cex.title)
-    
-    if(sum(nanc1) != sum(nanc2)) stop("Different number of ancestors for each parent")
-    if(length(nanc1) != length(nanc2)) stop("Different number of K for each parent")
-    
-    n <- sum(nanc1)
-    g <- log2(n * 2) + 1
-    k <- length(nanc1)
-
-    
-    qanc1 <- matrix(unlist(sapply(1:k, function(x) rep(diag(k)[x,], nanc1[x]*2))), ncol=k, nrow=n*2, byrow=T)
-    qanc2 <- matrix(unlist(sapply(1:k, function(x) rep(diag(k)[x,], nanc2[x]*2))), ncol=k, nrow=n*2, byrow=T)
-    qanc <- rbind(qanc1, qanc2)
-
-    xpoints <- seq(0, 1, length.out= n*2)
-    ypoints <- seq(1, 0, length.out = g + 1)
-    ydist <- 1/(g*2)
-    
-    # first generation
-    rect(xleft = rep(rep(xpoints, each=2) + c(-1/(n * 6), 1/(n*32)), each=k),
-         xright = rep(rep(xpoints, each=2) + c(-1/(n * 32), 1/(n*6)), each=k),
-         ybottom = ypoints[1] - ydist/2 +
-             rbind(rep(0,nrow(qanc)), apply(t(qanc[,1:(k-1)]), 2, cumsum)) * ydist,
-         ytop=ypoints[1]  - ydist/2 + apply(t(qanc), 2, cumsum) * ydist,
-         col=colpal[1:k], xpd=NA)
-
-    # recurisvely plot remaining generations
-    for(i in 2:g){
-        
-        xpoints0 <- xpoints
-        xpoints <- nextXpoints(xpoints)
-        qanc <- nextQanc(qanc)
-        
-        # jdraw oin parents to next gen kids by arrows
-        segments(x0=xpoints0, x1= rep(xpoints, each=2), y0=ypoints[i-1]-ydist/2, y1=ypoints[i] + ydist/2)
-        
-        # plot generation 2  
-        rect(xleft = rep(rep(xpoints, each=2) + c(-1/(n * 6), 1/(n*32)), each=k),
-         xright = rep(rep(xpoints, each=2) + c(-1/(n * 32), 1/(n*6)), each=k),
-         ybottom = ypoints[i] - ydist/2 + rbind(rep(0,nrow(qanc)), apply(t(qanc[,1:(k-1)]), 2, cumsum)) * ydist,
-         ytop=ypoints[i]  - ydist/2 + apply(t(qanc), 2, cumsum) * ydist,
-         col=colpal[1:k], xpd=NA)
-
-    }
-}
-
-
-
-
-plotPedigree2 <- function(pedigree, title = "", cex.title=1.5,
-                         colpal=colorpal){
-    # plot a single admixture pedigree, taking as input the number of unadmixed indivduals
-    # for each ancestral population in each branch
-    # pedigree: list of two vectors of length K that sum to 8
-
-    nanc1 <- pedigree[[1]]
-    nanc2 <- pedigree[[2]]
-
-    on.exit(par(mar=c(5,4,4,2) +0.1))
-
-    par(mar=c(0, 2.1, 4.1, 2.1))
-    plot.new()
-
-    text(x=0.5, y=1.12, labels=title, xpd=NA, cex=cex.title)
-    
-    if(sum(nanc1) != sum(nanc2)) stop("Different number of ancestors for each parent")
-    if(length(nanc1) != length(nanc2)) stop("Different number of K for each parent")
-    
-    n <- sum(nanc1)
-    g <- log2(n * 2) + 1
-    k <- length(nanc1)
-
-    
-    if(sum(nanc1) != sum(nanc2)) stop("Different number of ancestors for each parent")
-    if(length(nanc1) != length(nanc2)) stop("Different number of K for each parent")
-    
-    n <- sum(nanc1)
-    g <- log2(n * 2) + 1
-    k <- length(nanc1)
-
-    
-    qanc1 <- matrix(unlist(sapply(1:k, function(x) rep(diag(k)[x,], nanc1[x]*2))), ncol=k, nrow=n*2, byrow=T)
-    qanc2 <- matrix(unlist(sapply(1:k, function(x) rep(diag(k)[x,], nanc2[x]*2))), ncol=k, nrow=n*2, byrow=T)
-    qanc <- rbind(qanc1, qanc2)
-
-    xpoints <- seq(0, 1, length.out= n*2)
-    ypoints <- seq(1, 0, length.out = g + 1)
-    ydist <- 1/(g*2)
-    
-    # first generation
-    rect(xleft = rep(rep(xpoints, each=2) + c(-1/(n * 6), 1/(n*32)), each=k),
-         xright = rep(rep(xpoints, each=2) + c(-1/(n * 32), 1/(n*6)), each=k),
-         ybottom = ypoints[1] - ydist/2 +
-             rbind(rep(0,nrow(qanc)), apply(t(qanc[,1:(k-1)]), 2, cumsum)) * ydist,
-         ytop=ypoints[1]  - ydist/2 + apply(t(qanc), 2, cumsum) * ydist,
-         col=colpal[1:k], xpd=NA)
-
-    # recurisvely plot remaining generations up to parents
-    for(i in 2:(g-1)){
-        
-        xpoints0 <- xpoints
-        xpoints <- nextXpoints(xpoints)
-        qanc <- nextQanc(qanc)
-        
-        # draw lines to join parents to next gen kids
-        segments(x0=xpoints0, x1= rep(xpoints, each=2), y0=ypoints[i-1]-ydist/2, y1=ypoints[i] + ydist/2)
-        
-        # plot generation
-        rect(xleft = rep(rep(xpoints, each=2) + c(-1/(n * 6), 1/(n*32)), each=k),
-         xright = rep(rep(xpoints, each=2) + c(-1/(n * 32), 1/(n*6)), each=k),
-         ybottom = ypoints[i] - ydist/2 + rbind(rep(0,nrow(qanc)), apply(t(qanc[,1:(k-1)]), 2, cumsum)) * ydist,
-         ytop=ypoints[i]  - ydist/2 + apply(t(qanc), 2, cumsum) * ydist,
-         col=colpal[1:k], xpd=NA)
-    }
-
-    
-    # plot individual paired ancestry proportions given pedigree    
-    xpoints0 <- xpoints
-    xpoints <- nextXpoints(xpoints)
-
-    segments(x0=xpoints0, x1= rep(xpoints, each=2), y0=ypoints[g-1]-ydist/2, y1=ypoints[g] + ydist/2)
-    
-    qq <- pAFromPed(pedigree)
-
-    l1 <- xpoints - 1/(n * 6)
-    r1 <- xpoints - 1/(n * 32)
-    l2 <- xpoints + 1/(n*32)
-    r2 <- xpoints + 1/(n*6)
-
-    y <- ypoints[g] -  ydist/2
-
-    com <- combi(k)
-
-    rect(l1, y + c(0,cumsum(qq[1:(length(qq)-1)])) * ydist,r1, y + cumsum(qq) * ydist,
-         col=colpal[com[,1]], border=NA)
-    rect(l1, y, r1, y+ydist, col=NA)
-    
-    rect(l2, y + c(0,cumsum(qq[1:(length(qq)-1)])) * ydist,r2, y + cumsum(qq) * ydist,
-         col=colpal[com[,2]], border=NA)
-    rect(l2, y, r2, y+ydist, col=NA)
-    
-}
-
-
-
-plotPedigree3 <- function(pedigree, title = "", cex.title=1.5,
                          colpal=colorpal){
     # plot a single admixture pedigree, taking as input the number of unadmixed indivduals
     # for each ancestral population in each branch
@@ -1073,7 +811,6 @@ plotPedigree3 <- function(pedigree, title = "", cex.title=1.5,
 
 
 
-
 plotIndependentPedigree <- function(parentalQ, n=8, title = "", cex.title=1.5,
                         colpal=colorpal){
     ### plots pedigree assuming ancient admxiutre where all
@@ -1149,3 +886,34 @@ plotIndependentPedigree <- function(parentalQ, n=8, title = "", cex.title=1.5,
 
 
 }
+
+
+
+
+plotParentalAdmixture <- function(parentalQ,
+                                  inds=NULL,
+                                  indlabels=TRUE,
+                                  main.title="Parental admixture proportions"){
+    ### do plot of parental admixture for many samples
+
+    if(is.null(inds)) inds <- names(parentalQ)
+
+    parentalQ <- do.call("rbind", lapply(parentalQ, unlist))
+    
+    k <- ncol(parentalQ) / 2
+    barplot(t(parentalQ), col=colorpal[1:k], space=0,
+            xlab="", yaxt="n", xaxt="n", border=NA,
+            main="")
+    title(main=main.title, line=1, cex.main=1.5, xpd=NA)
+
+    abline(v=1:nrow(parentalQ), col="white", lwd=1, xpd=FALSE)
+
+    axis(side=2, at=c(0,0.5,0.98), labels=c(0,0.5,"1 0"), line=-0, cex.axis=1.2)
+    axis(side=2, at=c(1.02,1.5,2), labels=c("",0.5,1), line=-0, cex.axis=1.2)
+    text(label="Parent 1", x=-1 * nrow(parentalQ) / 10, y=0.5, srt=90, xpd=NA, cex=1.5)
+    text(label="Parent 2", x=-1 * nrow(parentalQ) / 10, y=1.5, srt=90, xpd=NA, cex=1.5)
+
+    if(indlabels) text((1:length(inds)) - 0.5, y=-0.1, labels=inds, xpd=NA, cex=1.3,srt=90)
+
+}
+
