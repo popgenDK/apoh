@@ -16,7 +16,6 @@ Arguments:\n\n
 \t\t--colpal:\t color palette as comma separated list of hexadecimal color codes (e.g. '#EE6677,#228833,#CCBB44...') \n
 \t\t-h:\t print help and exit.\n
 ")
-
 }
 
 

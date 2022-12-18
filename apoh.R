@@ -22,6 +22,8 @@ outdir <- pars$outdir
 npeds <- pars$npedigrees
 if(!is.null(pars$colpal)) colorpal <- unlist(strsplit(pars$colpal, ","))
 
+cat("Starting to run apoh, will use ", f, " as input\n\n\n")
+
 # read paired ancestry proporitons
 res <- read_ancestries(f)
 parentalAnc <- res[[1]]
@@ -89,3 +91,6 @@ for(i in 1:length(ids)){
     }
     
 }
+
+
+cat("Finished running apoh, all ouput can be found in ", outdir,"\n")
