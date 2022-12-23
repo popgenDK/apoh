@@ -1,7 +1,7 @@
 
 library(shiny)
-#source("https://raw.githubusercontent.com/popgenDK/apoh/main/apohFuns.R")
-source("/home/genis/github/apoh/apohFuns.R")
+source("https://raw.githubusercontent.com/popgenDK/apoh/main/apohFuns.R")
+#source("/home/genis/github/apoh/apohFuns.R")
 
 error <- function(txt)
     validate(  need(FALSE, txt)  ) 
