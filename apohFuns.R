@@ -471,7 +471,7 @@ doManySamplesIndexesTable <- function(parentalQs, pairedAncss = NULL, npeds=2, i
     names(parentalQs) <- ids
     rownames(pairedAncss) <- ids
     
-    pedigrees <- lapply(parentalQs, function(x) getAllSortedPedigrees(x)[1:npeds])#[1:2]
+    pedigrees <- lapply(parentalQs, function(x) getAllSortedPedigrees(x))
     pedSupport <- t(sapply(names(pedigrees), function(x) sapply(pedigrees[[x]], jsParentalQPed, parentalQ=parentalQs[[x]])))
 
     df <- data.frame("SampleID" = ids)
@@ -879,10 +879,9 @@ plotParentalAdmixture <- function(parentalQ,
 
     axis(side=2, at=c(0,0.5,0.98), labels=c(0,0.5,"1 0"), line=-0, cex.axis=1.2)
     axis(side=2, at=c(1.02,1.5,2), labels=c("",0.5,1), line=-0, cex.axis=1.2)
-    text(label="Parent 1", x=-1 * nrow(parentalQ) / 10, y=0.5, srt=90, xpd=NA, cex=1.5)
-    text(label="Parent 2", x=-1 * nrow(parentalQ) / 10, y=1.5, srt=90, xpd=NA, cex=1.5)
+    text(label="Parent 1", x=grconvertX(-0.06,"npc","user"), y=0.5, srt=90, xpd=NA, cex=1.5)
+    text(label="Parent 2", x=grconvertX(-0.06,"npc","user"), y=1.5, srt=90, xpd=NA, cex=1.5)
 
     if(indlabels) text((1:length(inds)) - 0.5, y=-0.1, labels=inds, xpd=NA, cex=1.3,srt=90)
 
 }
-

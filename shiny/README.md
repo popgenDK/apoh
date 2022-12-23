@@ -1,19 +1,37 @@
 
 # apoh - Admixture Pedigrees Of Hybrids
 
-apoh is a software to infer, explore, rank and visualize recent admixture pedigrees of hybrids. As input it takes the estimates of paired ancestry proportions that can be produced by NGSremix -bothanc 1 option. This shiny provides a Graphical User Interface (GUI) to do so interactively.
+apoh is a software to infer, explore, rank and visualize recent admixture pedigrees of hybrids. This shiny provides a Graphical User Interface (GUI) to do so interactively.
 
-## Usage
+More details on apoh can be found in [the github page](https://github.com/popgenDK/apoh)
 
-To upload the data 
+## GUI usage
 
-Shiny to process paired ancestries and parental admixture proporitons and visualize most likely pedigrees to generate observed proporitons.
+### Input
 
-Input format (for N individuals, K ancestral populations):
+The left panel allows you to enter the input:
 
-- Parental admixture: file with N rows and 2*K columns, each row estimates for a sample, first K columns are admixture proporitons of parent 1 and K+1 to 2*K columns are admixture proprotions of parent 2.
+- The main and only input apoh needs are the estimates of paired ancestry proportions that can be produced by NGSremix -bothanc 1 option (see [github to download and run NGSremix](https://github.com/popgenDK/apoh)). TheNGSremix output file needs to be uploaded as the model estiamtes in order to run apoh.
 
-- Paired ancestries (optional): file with N rows and (K*(K-1))/2 + K columns, with unordered ancestry proporitons estiamtes for a sample.
+- Additionally you can upload a text file with indivdiual IDs you want apoh to use for each sample in the output. This must be a text file with a single column and one row per sample. If no file is provided, apoh will use the first columnt of the model estiamtes file as sample ID.
 
-- Individual ID (optional): file with N rows and 1 column, with ID for each of the samples.
+- Most of the information apoh reports are specific to a single sample, and thus require to select an indidivual to explore in the left panel.
 
+- Finally, apoh deals with uncertainty by allowing to explore and compare multiple pedigrees that can lead to the observed estiamtes. In the left tab you can chose how many pedigrees you which to explore.
+
+### Tabs
+
+There are 5 tabs with different apoh outputs. The first 2 report information on all samples uploaded, while the other 3 are specific to a single sample 
+
+- Parental admixture plot: plot of estiamted parental admixutre proportions for all samples. Allow to visualize the parental admixutre proporitons estimated by NGSremix that apoh uses as input.
+
+- Summary indices table: table with summary indices for all samples.
+
+- Individual ordered paired ancestry plots: Plots of the ordered paired ancestry proportions for an individual. This is the main information on which apoh recent admixture pedigrees inference is based. It shows from left to right:
+  - Model estimates: the estimates for that sample the parental admixture model by the NGSremix.
+  - Expected under independent pedigree: the expectation under a model with independent ancestries, that corresponds to a case where the paired ancestries give no evidence to favor recent admixture.
+  - Expected under pedigree x: expected under a certain recent admixutre pedigree; will show as many as selected top compatible pedigrees in the left tab.
+
+- Individual pedigrees: visualization of the inferred pedigrees. It shows the independent ancestries pedigree, and the top compatible recent admixutre pedigrees selected.
+
+- Individual unordered paired ancestries plots: Plots of the unordered paired ancestry proprotions. While less informative than their ordered version, the comparison betweent the two models of inference allows to evaluate if the model assumptions are met, and thus if the inference is reliable.

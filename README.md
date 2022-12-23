@@ -1,6 +1,6 @@
 # apoh - **A**dmixture **P**edigrees **O**f **H**ybrids
 
-**apoh** is a software to infer, explore, rank and visualize recent admxiture pedigrees of hybrids. As input it takes the estimates of paired ancestry proportions that can be produced by NGSremix -bothanc 1. From the estimates **apoh** allows to find admixture pedigrees more likely to explain the observed proporitons, visualize them, rank them, explore the fit both visually and through summary indices, etc.
+apoh is a software to infer, explore, rank and visualize recent admxiture pedigrees of hybrids. As input it takes the estimates of paired ancestry proportions that can be produced by NGSremix -bothanc 1. From the estimates apoh allows to find admixture pedigrees more likely to explain the observed proporitons, visualize them, rank them, explore the fit both visually and through summary indices, etc.
 
 
 # Usage
@@ -27,7 +27,7 @@ NGSremix -plink <path to plink prefix> -fname <path to population allele frequen
 NGSremix -beagle <path to beagle file> -fname <path to population allele frequencies file>  -bothanc 1 -P <number of threads> -o <name of output file>
 ```
 
-This will produce a file called output.anccoeff (where output is the name speficied with the -o option in NGSremix). This file contains the parameter estimates for two models of paired ancestry proporitons, the 'parental admixture model' and the 'paired ancestries proporitons model', together with some information for each model and sample (log likelihood of the data and number of EM iterations needed for convergence). This
+This will produce a file called output.anccoeff (where output is the name speficied with the -o option in NGSremix). This file contains the parameter estimates for two models of paired ancestry proporitons, the 'parental admixture model' and the 'paired ancestries proporitons model', together with some information for each model and sample (log likelihood of the data and number of EM iterations needed for convergence).
 
 
 ## apoh
@@ -63,11 +63,11 @@ Rscript apoh.R -h
 The script will then create the specified output directory (if it already exists will stop with an error except if the `--forcedir TRUE` option is used), and within the directory will create the following output:
 
 ```
-parentalAdmixture.png : plot of parental admixutre proportions for each sample.
+parentalAdmixture.png : plot of parental admixture proportions for each sample.
 allSummaryIndices.tsv : table with summary indices for all samples
 ```
 
-and for each sample will create a directory with its ids containing:
+and for each sample will create a directory called {sampleid} (where sampleid is either the specified in --ids or the rownames from the .anccoeff file is --ids is not used). Each directory contains:
 
 ```
 {sampleid}_orderedPairAnc.png: plots of ordered paired ancestries.
@@ -81,6 +81,10 @@ pedigreex_sample_{sampleid}.png: plot of x pedigree for x in 1 to npedigrees (de
 In construction
 
 
+# Interpreting apoh's output
 
-# Short guide to interpreting apoh's output
 
+The basic idea behind apoh is that in the very first few generations after an admixture event, the descendants will have specific patterns of paired ancestry proportions in their genome, which deviate from the expected under an older admixture by showing an excess of interancestry heterozygosities. Using the paired ancestry proportions estiamted by NGSremix, apoh reconstructs recent admixture pedigrees that would result in similar proportions. Then we can use both visual inspection and measures of the distance between the model estimates and the expected proportions under a certain pedigree, to measure first is there is evidence for the individual being recently admixed, and second, in case there is, which is the most likely recent admiture pedigree.
+
+
+# apoh citation

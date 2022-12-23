@@ -57,10 +57,10 @@ shinyServer(function(input, output) {
         indlabels <- TRUE
         if(length(parentalQ) > 20) indlabels <- FALSE
         
-        par(oma = c(3,0.5,0,0))
+        par(oma = c(3,2,0,0))
         plotParentalAdmixture(parentalQ, indlabels= indlabels)
         
-    }, width=parentalPlotwidth, height=800)
+    }, width=1000, height=600)
 
 
     ## make table with summary indices, etc. for all samples
