@@ -15,9 +15,21 @@ cd src
 make -f CPP_Makefile
 ```
 
-NGSremix can then be run from either genotype data in [binary PLINK format](https://www.cog-genomics.org/plink/1.9/formats#bed) or genotype likelihood data in [beagle format](http://popgen.dk/angsd/index.php/Genotype_Likelihoods#Beagle_format). NGSremix will also need the ancestral population allele frequencies, that you can estimate with [ADMIXTURE](https://dalexander.github.io/admixture) or [NGSadmix](www.popgen.dk/software/index.php/NgsAdmix) for genotype or genotype likelihood data, respectively.
+NGSremix can then be run from either genotype data in [binary PLINK format](https://www.cog-genomics.org/plink/1.9/formats#bed) or genotype likelihood data in [beagle format](http://popgen.dk/angsd/index.php/Genotype_Likelihoods#Beagle_format) if you have low depth sequencing data. NGSremix will also need the ancestral population allele frequencies, that you can estimate with [ADMIXTURE](https://dalexander.github.io/admixture) or [NGSadmix](www.popgen.dk/software/index.php/NgsAdmix) for genotype or genotype likelihood data, respectively. Assuming we have K ancestral populaiton, ancestral population allele frequencies can be estiamted with:
 
-Then you can estimate paired ancestry proportions with:
+```
+# with genotype data
+admixture <path to plink prefix> <K>
+```
+The ancestral population allele frequencies will be in the filed called in {plinkprefix}.K.P, which can be used directly as input to NGSremix with the `-fname` argument.
+
+```
+# with genotype likelihood data
+#NGSadmix -likes <path to beagle file> _K <K> -outifles <output prefix>
+```
+The ancestral population allele frequencies will be in the filed called in {outrpefix}.fopt.gz, which can be used directly as input to NGSremix with the `-fname` argument.
+
+Then you can use NGSremix to estimate paired ancestry proportions with:
 
 ```
 # with genotype data
@@ -27,8 +39,7 @@ NGSremix -plink <path to plink prefix> -fname <path to population allele frequen
 NGSremix -beagle <path to beagle file> -fname <path to population allele frequencies file>  -bothanc 1 -P <number of threads> -o <name of output file>
 ```
 
-This will produce a file called output.anccoeff (where output is the name speficied with the -o option in NGSremix). This file contains the parameter estimates for two models of paired ancestry proporitons, the 'parental admixture model' and the 'paired ancestries proporitons model', together with some information for each model and sample (log likelihood of the data and number of EM iterations needed for convergence).
-
+This will produce a file called output.anccoeff (where output is the name speficied with the -o option in NGSremix). This file contains the parameter estimates for two models of paired ancestry proporitons, the 'parental admixture model' and the 'paired ancestries proporitons model', together with some information for each model and sample (log likelihood of the data and number of EM iterations needed for convergence). The ancestry estimates assume the chosen number of populations (K) and ancestral population allele frequencies are accurate. If they are not, or if the focal individuals have ancestry from populations not well represented in the dataset, the ancestry estiamtes and downstream pedigree inference will not be accurate.
 
 ## apoh
 
