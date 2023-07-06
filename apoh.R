@@ -25,7 +25,14 @@ if(!is.null(pars$colpal)) colorpal <- unlist(strsplit(pars$colpal, ","))
 cat("Starting to run apoh, will use ", f, " as input\n\n\n")
 
 # read paired ancestry proporitons
-res <- read_ancestries(f)
+if(!has_boot(f)){
+    res <- read_ancestries(f)
+} else {
+    res0 <- read_ancestries_boot(f)
+    res <- res0[[1]]
+    boots <- res0[[2]]
+}
+    
 parentalAnc <- res[[1]]
 pairAnc <- res[[2]]
 
@@ -38,7 +45,7 @@ dir.create(outdir)
 
 
 # make plot of parentaladmxiture proportions
-outpng1 <- paste0(outdir, "/parantalAdmixture.png")
+outpng1 <- paste0(outdir, "/parentalAdmixture.png")
 bitmap(outpng1, w=8, h=4, res=300)
 plotParentalAdmixture(parentalAnc, inds=ids)
 dev.off()
@@ -89,7 +96,22 @@ for(i in 1:length(ids)){
         dev.off()
 
     }
-    
+}
+
+
+## if has bootstrap, save table with boostrap support for pedigrees
+if(has_boot(f)){
+
+    outboot <- paste0(outdir, "/pedigreeBootSupport.tsv")
+    maxpeds <- 8
+
+    pedigrees <- lapply(parentalAnc, function(x) getAllSortedPedigrees(x, maxped=maxpeds))
+
+    bootsupport <- bootSupportPedigree(boots, pedigrees, maxped=maxpeds)
+    bootsupport <- data.frame(ID=ids, bootsupport)
+    write.table(x=bootsupport,file=outboot, row.names=F, col.names=T, quote=F, sep="\t")
+    cat("Wrote bootstrap results in ", outboot, "\n")
+
 }
 
 

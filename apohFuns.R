@@ -1,8 +1,7 @@
-
 # this is default palette
 #tol_bright palette From Paul Tol: https://personal.sron.nl/~pault/
 colorpal <- c('#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#4477AA','#BBBBBB',
-          "#332288", "#CC3311", "#EE7733", "#EE3377", "#000000") # this line I added to have colors for higher K
+          "#332288", "#CC3311", "#EE7733", "#EE3377", "#000000", "#FFFFFF") # this line I added to have colors for higher K
 
 printHelp <- function(){
 
@@ -26,7 +25,8 @@ readArgs <- function(args){
                  ids = NULL,
                  npedigrees = 2,
                  forcedir = FALSE,
-                 colpal = NULL
+                 colpal = NULL,
+                 bootci = 0.95
                  )
 
     for(i in seq(1, length(args), 2)
@@ -44,6 +44,8 @@ readArgs <- function(args){
             pars$forcedir <- as.logical(args[i+1])
         } else if(args[i] == "--colpal"){
             pars$colpal <- args[i+1]
+        } else if(args[i] == "--boot_ci"){
+            pars$bootci <- as.integer(args[i+1])
         } else if(args[i] == "-h" | args[i] == "--help"){
             printHelp()
             stop("Printed help and exited due to -h flag, not really an error.")
@@ -85,9 +87,7 @@ num <- function(x)
 
 #### to read paired and parental ancestries from ngsremix
 
-read_ancestries <- function(f){
-
-    d <- read.table(f, h=T, stringsAsFactors=F)
+df_to_list <- function(d){
 
     # extract paired ancestries
     pairAnc <- as.numeric(unlist(strsplit(d$paired_est, split=",")))
@@ -104,6 +104,43 @@ read_ancestries <- function(f){
 
 }
 
+has_boot <- function(f)
+    return(scan(f, nlines=1, what="fda")[2] == "is_boot")
+
+
+read_ancestries <- function(f){
+
+    d <- read.table(f, h=T, stringsAsFactors=F)
+
+    res <- df_to_list(d)
+
+    return(res)
+}
+
+
+read_ancestries_boot <- function(f){
+
+    d <- read.table(f, h=T, stringsAsFactors=F)
+
+    n_boot <- nrow(d[d$ind == d$ind[1] & d$is_boot == "boot",])
+    ids <- unique(d$ind)
+    
+    org <- df_to_list(d[d$is_boot == "org",])
+    boots <- d[d$is_boot == "boot",]
+    boots$nrep <- 1:n_boot
+
+    lboots <- lapply(1:n_boot, function(x) df_to_list(boots[boots$nrep == x, ]))
+    for(i in 1:n_boot) lboots[[i]][[1]] <- fixPerms(org[[1]], lboots[[i]][[1]])
+
+    return(list(org, lboots))
+
+}
+
+
+
+##############################
+##### PEDIGREE FUNCITONS #####
+##############################
 
 
 getAncestorsQ <- function(q, g=3){
@@ -400,14 +437,14 @@ jsRatio <- function(parentalQ){
 
 
 
-minHetAnc <- function(parentalQ){
+minHetAnc <- function(parentalQ, minhet = 0.05){
 
     panc <- orderedPAFromParentalQ(parentalQ)
     k <- length(parentalQ[[1]])
     a <- permi(k)
 
     hets <- panc[a[,1] != a[,2]]
-    return(min(hets[hets>0.01]))
+    return(min(hets[hets>0.05]))
 }
 
 
@@ -449,7 +486,7 @@ rankPedigreesParentalQdist <- function(parentalQ, pedigrees){
 }
 
 
-getAllSortedPedigrees <- function(parentalQ){
+getAllSortedPedigrees <- function(parentalQ, maxped=8){
     # given parental Q, get all compatible pedigrees by order of
     # more to less distant to paretnalQ
 
@@ -457,10 +494,42 @@ getAllSortedPedigrees <- function(parentalQ){
 
     ord <- rankPedigreesParentalQdist(parentalQ, pedigrees)
 
-    pedigrees <- pedigrees[ord]
+    pedigrees <- pedigrees[ord][1:maxped]
     return(pedigrees)
 
 }
+
+
+
+###########################################
+#### FUNCTIONS FOR BOOTSTRAP ESTIMATES ####
+###########################################
+
+bootSupportPedigree <- function(boots, pedigrees, maxped=8){
+
+    parentalAncBoots <- lapply(boots, function(x) x[[1]])
+    nboots <- length(boots)
+    
+    # distance to independent pedigree for each bootstrap
+    indepDistsBoots <- lapply(1:length(parentalAnc), function(y) sapply(parentalAncBoots, function(x) jsRecentOldParentalQ(x[[y]])))
+    # distance to each recent admix pedigree for each boostrap
+    pedDistsBoots <- lapply(1:length(parentalAnc),function(y) sapply(parentalAncBoots, function(x) sapply(pedigrees[[y]], jsParentalQPed, parentalQ = x[[y]])))
+    # merge distance to independent and recent amdixutre pedigrees
+    allPedDistsBoots <- lapply(1:length(indepDistsBoots), function(x) rbind(indepDistsBoots[[x]], pedDistsBoots[[x]]))
+
+    # get pedigree with lowest minimum in each boostrap and use it to define bootstrap support
+    bootSupport <- lapply(1:length(allPedDistsBoots), function(x) table(factor(apply(allPedDistsBoots[[x]],2, which.min), levels=1:(maxped+1))) / nboots)
+
+    bootSupportDF <- t(data.frame(do.call("cbind", bootSupport), row.names=c("Independent pedigree", paste("Pedigree", 1:maxped))))
+
+    return(bootSupportDF)
+}
+
+
+####################################################
+######## FUNCITONS TO DO TABLES AND FIGURES ########
+####################################################
+
 
 
 doManySamplesIndexesTable <- function(parentalQs, pairedAncss = NULL, npeds=2, ids=NULL){
@@ -472,15 +541,15 @@ doManySamplesIndexesTable <- function(parentalQs, pairedAncss = NULL, npeds=2, i
     rownames(pairedAncss) <- ids
     
     pedigrees <- lapply(parentalQs, function(x) getAllSortedPedigrees(x))
-    pedSupport <- t(sapply(names(pedigrees), function(x) sapply(pedigrees[[x]], jsParentalQPed, parentalQ=parentalQs[[x]])))
+    pedSupport <- matrix((unlist(sapply(names(pedigrees), function(x) sapply(pedigrees[[x]], jsParentalQPed, parentalQ=parentalQs[[x]])))), nrow=length(pedigrees), byrow=T)
 
     df <- data.frame("SampleID" = ids)
 
-    if(!is.null(pairedAncss)) df["InconsistencyIndex"] <- format(sapply(ids, function(x) inconsistencyIndex(parentalQs[[x]], pairedAncss[x,])), digits=2,nsmall=2,scientific=F)
-    df["Distance to independent pedigree"] <- format(sapply(parentalQs, jsRecentOldParentalQ), digits=2,nsmall=2,scientific=F)
-    for(i in 1:npeds) df[paste("Distance to pedigree",i)] <- format(pedSupport[,i], digits=2,nsmall=2,scientific=F)
+    if(!is.null(pairedAncss)) df["InconsistencyIndex"] <- format(round(sapply(ids, function(x) inconsistencyIndex(parentalQs[[x]], pairedAncss[x,])),2), digits=2,nsmall=2,scientific=F)
+    df["Distance to independent pedigree"] <- format(round(sapply(parentalQs, jsRecentOldParentalQ),2), digits=2,scientific=F)
+    for(i in 1:npeds) df[paste("Distance to pedigree",i)] <- format(round(pedSupport[,i], 2), digits=2,scientific=F)
     
-    df["Admixture index"] <-  sapply(1:length(parentalQs), function(x) ifelse(df[x,"Distance to independent pedigree"] > df[x,"Distance to pedigree 1"], tFromParentalQ(parentalQs[[x]]), ""))
+    df["Admixture index"] <-  as.numeric(sapply(1:length(parentalQs), function(x) ifelse(df[x,"Distance to independent pedigree"] > df[x,"Distance to pedigree 1"], format(round(tFromParentalQ(parentalQs[[x]]), 2),digits=2,nsmall=2,scientific=F), "")))
     
     return(df)
 }
@@ -885,3 +954,38 @@ plotParentalAdmixture <- function(parentalQ,
     if(indlabels) text((1:length(inds)) - 0.5, y=-0.1, labels=inds, xpd=NA, cex=1.3,srt=90)
 
 }
+
+
+
+### helper funs to make sure permutations across different estiamtes for same indivduals are ocnsisten
+myDist <- function(x1, x2) sqrt(sum((x1 - x2)^2))
+
+bestPermutationDist <- function(qq1, qq2){
+    # takes two parental ancestry estimates (list format).
+    # returns the permutation of qq2 that minimizes distance to qq1
+
+    m1 <- do.call("rbind", qq1)
+    m2a <- do.call("rbind", qq2)
+    m2b <- do.call("rbind", qq2)[2:1,] 
+
+    if(myDist(c(m1), c(m2a)) < myDist(c(m1), c(m2b))){
+        return(qq2)
+    } else {
+        return(qq2[2:1])
+    }
+    
+}
+
+
+fixPerms <- function(est1, est2){
+    # from different list of estiamtes or parental ancestry proporitons
+    # from multiple individuals, fixes est2
+    # so the permutation in the one that minimizes the distance with est1
+
+    n <- length(est1)
+    res <- lapply(1:n, function(x) bestPermutationDist(est1[[x]], est2[[x]]))
+
+    return(res)
+    
+}
+

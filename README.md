@@ -105,6 +105,5 @@ The left panels (D) shows, from left to right, the paired ancestry estiamted fro
 
 
 # apoh citation
- Estimating admixture pedigrees of recent hybrids without a contiguous reference genome
-Genís Garcia-Erill, Kristian Hanghøj, Rasmus Heller, Carsten Wiuf, Anders Albrechtsen
-bioRxiv 2022.12.15.520578; doi: https://doi.org/10.1101/2022.12.15.520578 
+
+Garcia-Erill, G., Hanghøj, K., Heller, R., Wiuf, C., & Albrechtsen, A. (2023). Estimating admixture pedigrees of recent hybrids without a contiguous reference genome. Molecular Ecology Resources, 00, 1– 16. https://doi.org/10.1111/1755-0998.13830 
