@@ -505,7 +505,7 @@ getAllSortedPedigrees <- function(parentalQ, maxped=8){
 #### FUNCTIONS FOR BOOTSTRAP ESTIMATES ####
 ###########################################
 
-bootSupportPedigree <- function(boots, pedigrees, maxped=8){
+bootSupportPedigree <- function(boots, pedigrees, parentalAnc, maxped=8, showped=2){
 
     parentalAncBoots <- lapply(boots, function(x) x[[1]])
     nboots <- length(boots)
@@ -520,7 +520,7 @@ bootSupportPedigree <- function(boots, pedigrees, maxped=8){
     # get pedigree with lowest minimum in each boostrap and use it to define bootstrap support
     bootSupport <- lapply(1:length(allPedDistsBoots), function(x) table(factor(apply(allPedDistsBoots[[x]],2, which.min), levels=1:(maxped+1))) / nboots)
 
-    bootSupportDF <- t(data.frame(do.call("cbind", bootSupport), row.names=c("Independent pedigree", paste("Pedigree", 1:maxped))))
+    bootSupportDF <- t(data.frame(do.call("cbind", bootSupport)[1:(showped+1),], row.names=c("Independent pedigree", paste("Pedigree", 1:showped))))
 
     return(bootSupportDF)
 }

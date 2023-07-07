@@ -14,8 +14,11 @@ shinyServer(function(input, output) {
         f <- input$anccoefFile
         indf <- input$indfile
 
-        x <- read_ancestries(f$datapath)[[2]]
-        
+        if(has_boot(f$datapath)){
+            x <- read_ancestries_boot(f$datapath)[[1]][[2]]
+        } else {
+            x <- read_ancestries(f$datapath)[[2]]
+        }
         #inds <- 1:nrow(x)
         if(!is.null(indf)){
             inds <- scan(indf$datapath, what="fd")
@@ -31,7 +34,11 @@ shinyServer(function(input, output) {
         f <- input$anccoefFile
         indf <- input$indfile
 
-        x <- read_ancestries(f$datapath)[[1]]
+        if(has_boot(f$datapath)){
+            x <- read_ancestries_boot(f$datapath)[[1]][[1]]
+        } else {
+            x <- read_ancestries(f$datapath)[[1]]
+        }
 
         if(!is.null(indf)){
             inds <- scan(indf$datapath, what="fd")
@@ -39,6 +46,19 @@ shinyServer(function(input, output) {
         }
         
         return(x)
+    })
+
+    parentalQBoots <- reactive({
+
+        f <- input$anccoefFile
+
+        validate(
+            need(has_boot(f$datapath), "Input file has no bootstrap replicates!")
+        )
+
+        x <- read_ancestries_boot(f$datapath)[[2]]
+        return(x)    
+
     })
 
     ## get optimal widht for parental admixture plot given number of samples
@@ -215,58 +235,85 @@ shinyServer(function(input, output) {
                        main_title = paste("Ordered paired ancestry proportions\nsample", input$ind))
     }, width = widthPlot3, height=400)
 
-
-
-
-
-
-    output$downloadPedigreePlots <- downloadHandler(
-        filename = function(){"admixturePedigrees.pdf"},
-        content = function(fname){
-
-            pdf(fname)
-            for(i in 1:length(pedigrees()))  plotPedigree(pedigrees()[[i]],
-                                                           title=paste("Pedigree", i))
-            dev.off()
-
-        }
-    )
-            
-
-            
-    output$downloadPairedAncPlots <- downloadHandler(
-        filename = function(){"pairedAncestries.pdf"},
-        content = function(fname){
-        parentalQ <- allParentalQ()[[input$ind]]
-        pairedAnc <- allPairedAnc()[input$ind,]
-
-            
-            pdf(fname)
-            for(i in 1:length(pedigrees()))  plotEstimates(pairedAnc,
-                                                            parentalQ,
-                                                            pedigrees()[[i]],
-                                                            main_title = paste("Paired ancestry proportions\n pedigree", i))
-            dev.off()
-
-        }
-    )
-
-
     
-  output$downloadSummaryTable <- downloadHandler(
-       filename = function(){"allAdmixPedigreesSummary.tsv"}, 
+    ## DO TABLE WITH BOOTSTRAP SUPPORT PER PEDIGREE
+    output$bootSupport <- renderDataTable({
+
+        f <- input$anccoefFile
+        nshow <- input$ncases
+        indf <- input$indfile
+
+        validate(
+            need(has_boot(f$datapath), "Input file does not contain bootstrap replicates!")
+        )
+        #nshow <- min(nshow, length(pedigrees()))
+
+        maxpeds <- 8
+        parentalQ <- allParentalQ()
+        boots <- parentalQBoots()
+        pedigrees <- lapply(parentalQ, function(x) getAllSortedPedigrees(x, maxped=maxpeds))
+
+        
+        if(!is.null(indf)){ inds <- scan(indf$datapath, what="fd")} else {inds <- names(parentalQ)}
+
+            bootsupport <- bootSupportPedigree(boots, pedigrees, parentalQ, maxped=maxpeds, showped=nshow)
+            data.frame(ID=inds, bootsupport)
+    })
+
+
+    ###############################
+    ### DOWNLOAD OUTPUT TABLES ####
+    ###############################
+    
+  output$downloadIndicesTable <- downloadHandler(
+      filename = function(){"summaryIndicesTable.tsv"}, 
       content = function(fname){
 
-          parentalQ <- allParentalQ()[[input$ind]]
-          pairedAnc <- allPairedAnc()[input$ind,]
+          nshow <- input$ncases
+          indf <- input$indfile
 
-          
-           d <- makePedigreesSummaryTable(pairedAnc, parentalQ, pedigrees(), is.ord=TRUE)
-           write.table(d, fname, sep="\t", col.names=T, row.names=F,quote=F)
+          parentalQ <- allParentalQ()
+          pairedAnc <- allPairedAnc()
+
+                  
+        if(!is.null(indf)){ inds <- scan(indf$datapath, what="fd")} else {inds <- NULL}
+
+          d <- doManySamplesIndexesTable(parentalQs = allParentalQ(), pairedAncss = allPairedAnc(), ids = inds, npeds=nshow)
+
+          write.table(d, fname, sep="\t", col.names=T, row.names=F,quote=F)
     }
   )
 
-            
+
+    
+    output$downloadBootSupportTable <- downloadHandler(
+       filename = function(){"bootSupportTable.tsv"}, 
+      content = function(fname){
+
+          f <- input$anccoefFile
+          nshow <- input$ncases
+          indf <- input$indfile
+
+          validate(
+            need(has_boot(f$datapath), "Input file does not contain bootstrap replicates!")
+        )
+        #nshow <- min(nshow, length(pedigrees()))
+          
+          maxpeds <- 8
+          parentalQ <- allParentalQ()
+          boots <- parentalQBoots()
+          pedigrees <- lapply(parentalQ, function(x) getAllSortedPedigrees(x, maxped=maxpeds))
+
+        
+          if(!is.null(indf)){ inds <- scan(indf$datapath, what="fd")} else {inds <- names(parentalQ)}
+
+          bootsupport <- bootSupportPedigree(boots, pedigrees, parentalQ, maxped=maxpeds, showped=nshow)
+          d <- data.frame(ID=inds, bootsupport)
+
+          write.table(d, fname, sep="\t", col.names=T, row.names=F,quote=F)
+    }
+  )
+
 
     
 

@@ -1,7 +1,7 @@
 
 library(shiny)
-library(markdown, lib.loc="/newHome/genis/R/x86_64-pc-linux-gnu-library/4.1")
-library(xfun, lib.loc="/newHome/genis/R/x86_64-pc-linux-gnu-library/4.1")
+library(markdown, lib.loc="/home/genis/R/x86_64-pc-linux-gnu-library/4.1")
+library(xfun, lib.loc="/home/genis/R/x86_64-pc-linux-gnu-library/4.1")
 
 
 shinyUI(fluidPage(
@@ -22,10 +22,12 @@ shinyUI(fluidPage(
         
             actionButton("run", label="Run"),
 
-            helpText("Download the output:"),            
-            downloadButton("downloadPedigreePlots", "Download pdf with all possible pedigrees."),
-            downloadButton("downloadSummaryTable", "Download table with summary of all near pedigrees."),
-            downloadButton("downloadPairedAncPlots", "Download pdf with all paired ancestry given all possible pedigrees.")
+            helpText("Download the output tables:"),            
+#            downloadButton("downloadPedigreePlots", "Download pdf with all possible pedigrees."),
+            downloadButton("downloadIndicesTable", "Download table with summary indices for all samples."),
+            downloadButton("downloadBootSupportTable", "Download table with bootstrap support for the pedigrees for each sample.")
+
+#            downloadButton("downloadPairedAncPlots", "Download pdf with all paired ancestry given all possible pedigrees.")
             
           ),
 
@@ -37,6 +39,7 @@ shinyUI(fluidPage(
                 tabPanel("Individual ordered paired ancestries plots", plotOutput("orderedPairAncPlot")),
                 tabPanel("Individual pedigrees", plotOutput("pedigreePlot", width="auto", height="auto")),
                 tabPanel("Individual unordered paired ancestries plots", plotOutput("unorderedPairAncPlot")),
+                tabPanel("Pedigrees bootstrap support table", dataTableOutput("bootSupport"))
             
         ))
     )

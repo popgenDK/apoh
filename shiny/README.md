@@ -21,7 +21,7 @@ The left panel allows you to enter the input:
 
 ### Tabs
 
-There are 5 tabs with different apoh outputs. The first 2 report information on all samples uploaded, while the other 3 are specific to a single sample 
+There are 6 tabs with different apoh outputs. The first 2 and the last one report information on all samples uploaded, while the other 3 middle ones to a single sample 
 
 - Parental admixture plot: plot of estiamted parental admixutre proportions for all samples. Allow to visualize the parental admixutre proporitons estimated by NGSremix that apoh uses as input.
 
@@ -35,3 +35,5 @@ There are 5 tabs with different apoh outputs. The first 2 report information on 
 - Individual pedigrees: visualization of the inferred pedigrees. It shows the independent ancestries pedigree, and the top compatible recent admixutre pedigrees selected.
 
 - Individual unordered paired ancestries plots: Plots of the unordered paired ancestry proprotions. While less informative than their ordered version, the comparison betweent the two models of inference allows to evaluate if the model assumptions are met, and thus if the inference is reliable.
+
+- Pedigrees bootstrap support table: for each pedigree (the independent pedigree and the number of recent admixutre pedigrees selected) shows the proporiton of bootstrap while each sample has that pedigree as the closest one to the estimates. Requires that the input file with model estimates has the bootstrap replicates (done with the flag -boot 1 when running NGSremix. Currently only works with beagle file input)
