@@ -109,7 +109,7 @@ if(has_boot(f)){
 
     bootsupport <- bootSupportPedigree(boots, pedigrees,parentalAnc,  maxped=maxpeds)
     bootsupport <- data.frame(ID=ids, bootsupport)
-    write.table(x=bootsupport,file=outboot, row.names=F, col.names=T, quote=F, sep="\t", showped=npeds)
+    write.table(x=bootsupport,file=outboot, row.names=F, col.names=T, quote=F, sep="\t")
     cat("Wrote bootstrap results in ", outboot, "\n")
 
 }
