@@ -493,6 +493,7 @@ getAllSortedPedigrees <- function(parentalQ, maxped=8){
     pedigrees <- getAllPedigrees(parentalQ)
 
     ord <- rankPedigreesParentalQdist(parentalQ, pedigrees)
+    maxped <- min(maxped, length(pedigrees)[[1]])
 
     pedigrees <- pedigrees[ord][1:maxped]
     return(pedigrees)
