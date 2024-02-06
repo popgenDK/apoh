@@ -17,17 +17,23 @@ make -f CPP_Makefile
 
 NGSremix can then be run from either genotype data in [binary PLINK format](https://www.cog-genomics.org/plink/1.9/formats#bed) or genotype likelihood data in [beagle format](http://popgen.dk/angsd/index.php/Genotype_Likelihoods#Beagle_format) if you have low depth sequencing data. NGSremix will also need the ancestral population allele frequencies, that you can estimate with [ADMIXTURE](https://dalexander.github.io/admixture) or [NGSadmix](www.popgen.dk/software/index.php/NgsAdmix) for genotype or genotype likelihood data, respectively. Assuming we have K ancestral populaiton, ancestral population allele frequencies can be estiamted with:
 
+### Allele frequency estimation with genotype data
+
 ```
 # with genotype data
 admixture <path to plink prefix> <K>
 ```
 The ancestral population allele frequencies will be in the filed called in {plinkprefix}.K.P, which can be used directly as input to NGSremix with the `-fname` argument.
 
+### Allele frequency estimation with genotype likelihood data
+
 ```
 # with genotype likelihood data
 #NGSadmix -likes <path to beagle file> _K <K> -outifles <output prefix>
 ```
 The ancestral population allele frequencies will be in the filed called in {outrpefix}.fopt.gz, which can be used directly as input to NGSremix with the `-fname` argument.
+
+### Estimation of paired ancestry proportions with NGSremix
 
 Then you can use NGSremix to estimate paired ancestry proportions with:
 
