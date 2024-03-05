@@ -15,7 +15,7 @@ cd src
 make -f CPP_Makefile
 ```
 
-NGSremix can then be run from either genotype data in [binary PLINK format](https://www.cog-genomics.org/plink/1.9/formats#bed) or genotype likelihood data in [beagle format](http://popgen.dk/angsd/index.php/Genotype_Likelihoods#Beagle_format) if you have low depth sequencing data. NGSremix will also need the ancestral population allele frequencies, that you can estimate with [ADMIXTURE](https://dalexander.github.io/admixture) or [NGSadmix](www.popgen.dk/software/index.php/NgsAdmix) for genotype or genotype likelihood data, respectively. Assuming we have K ancestral populaiton, ancestral population allele frequencies can be estiamted with:
+NGSremix can then be run from either genotype data in [binary PLINK format](https://www.cog-genomics.org/plink/1.9/formats#bed) or genotype likelihood data in [beagle format](https://popgen.dk/angsd/index.php/Genotype_Likelihoods#Beagle_format) if you have low depth sequencing data. NGSremix will also need the ancestral population allele frequencies, that you can estimate with [ADMIXTURE](https://dalexander.github.io/admixture) or [NGSadmix](www.popgen.dk/software/index.php/NgsAdmix) for genotype or genotype likelihood data, respectively. Assuming we have K ancestral populaiton, ancestral population allele frequencies can be estiamted with:
 
 ### Allele frequency estimation with genotype data
 
