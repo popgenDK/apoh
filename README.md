@@ -45,7 +45,18 @@ NGSremix -plink <path to plink prefix> -fname <path to population allele frequen
 NGSremix -beagle <path to beagle file> -fname <path to population allele frequencies file>  -bothanc 1 -P <number of threads> -o <name of output file>
 ```
 
-This will produce a file called output.anccoeff (where output is the name speficied with the -o option in NGSremix). This file contains the parameter estimates for two models of paired ancestry proporitons, the 'parental admixture model' and the 'paired ancestries proporitons model', together with some information for each model and sample (log likelihood of the data and number of EM iterations needed for convergence). The ancestry estimates assume the chosen number of populations (K) and ancestral population allele frequencies are accurate. If they are not, or if the focal individuals have ancestry from populations not well represented in the dataset, the ancestry estiamtes and downstream pedigree inference will not be accurate.
+This will produce a file called `output.anccoeff` (where output is the name speficied with the -o option in NGSremix). This is a 7 column file which contains:
+
+- `ind` indivdiual ID (corresponds to its position in gentoype or gl input file).
+- `paired_est` estimates for the paired ancestries model, a total of $K(K-1) \over 2$ parameters (for `K` ancestral populations) separated by commas. For example for `K=3` we would have $\phi_{11}, \phi_{12}, \phi_{13}, \phi_{22}, \phi_{23}, \phi_{33}$, where $\phi_{11}$ gives the porporiton of the genome where both alleles are from population 1, $\phi_{12}$ the proportion where one allele is from poulation 1 and the otehr from population 2, and so on.
+- `paired_iter` number of iterations of the EM algorithm run before convergence for the paired ancestries model.
+- `paired_ll` log-likelihood of the data for the maximum likelihood estimates of the paired ancestries model.
+- `parental_est` estimates for the parental ancestries model, a total of $2K$ parameters (for `K` ancestral populations) separated by commas. For example for `K=3` we would have ${q^{p_1}_1}, {q^{p_1}_2}, {q^{p_1}_3}, {q^{p_2}_1}, {q^{p_2}_2}, {q^{p_2}_3}$, where for example ${q^{p_1}_1}$  gives the porporiton of the genome where parent 1 has ancestry from population 1 and ${q^{p_2}_3}$ the porporiton of the genome where parent 2 has ancestry from population 3.
+- `parental_iter` number of iterations of the EM algorithm run before convergence for the parental ancestries model.
+- `parental_ll` log-likelihood of the data for the maximum likelihood estimates of the parental ancestries model.
+
+
+The ancestry estimates assume the chosen number of populations (K) and ancestral population allele frequencies are accurate. If they are not, or if the focal individuals have ancestry from populations not well represented in the dataset, the ancestry estiamtes and downstream pedigree inference will not be accurate.
 
 ## apoh
 
