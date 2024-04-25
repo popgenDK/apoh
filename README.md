@@ -68,7 +68,7 @@ apoh can be run in three different ways: through the shiny app as a Graphical Us
 
 The shiny app for apoh can be accessed online in:
 
-`https://popgen.dk/shiny/genis/apoh`
+[https://popgen.dk/shiny/genis/apoh](https://popgen.dk/shiny/genis/apoh/)
 
 The GUI can also be run locally by running from an R terminal from the folder where apoh is downloaded `shiny::runApp('shiny')` (this usage has not been tested)
 
